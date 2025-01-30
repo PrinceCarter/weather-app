@@ -19,7 +19,6 @@ export default function App() {
   const [selectedDay, setSelectedDay] = useState(dayjs().format("dddd"));
   const [selectedTime, setSelectedTime] = useState<TimeOfDay>("Afternoon");
   const [hasSearched, setHasSearched] = useState(false);
-  const [loadingSuggestion, setLoadingSuggestion] = useState(false);
   const [suggestion, setSuggestion] = useState("");
   const [weatherData, setWeatherData] = useState<WeatherDay[]>([]);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -61,7 +60,6 @@ export default function App() {
         const { lat, lon } = JSON.parse(savedLocation);
         if (lat && lon) {
           setHasSearched(true);
-          setLoadingSuggestion(true);
           getWeather({ variables: { lat, lon, selectedDay } });
         }
       }
@@ -75,7 +73,6 @@ export default function App() {
   useEffect(() => {
     if (data?.getWeather) {
       setWeatherData(data.getWeather);
-      setLoadingSuggestion(false);
     }
   }, [data]);
 
@@ -84,7 +81,6 @@ export default function App() {
     (lat: number, lon: number, name: string) => {
       if (lat && lon) {
         setHasSearched(true);
-        setLoadingSuggestion(true);
         localStorage.setItem(
           "lastLocation",
           JSON.stringify({ name, lat, lon })
@@ -117,7 +113,6 @@ export default function App() {
       setSuggestion(
         getBetterDaySuggestion(selectedDaysData[0], selectedDaysData[1])
       );
-      setLoadingSuggestion(false);
     }
   }, [selectedDaysData]);
 
@@ -146,14 +141,14 @@ export default function App() {
           {/* Suggestion Section */}
           {hasSearched && (
             <Alert className="mb-4 w-full">
-              {loadingSuggestion ? (
+              {loading ? (
                 <div className="space-y-2">
-                  <div className="animate-pulse h-5 bg-gray-300 w-1/3 rounded"></div>
-                  <div className="animate-pulse h-4 bg-gray-300 w-3/4 rounded"></div>
+                  <AlertTitle>Weather Suggestion</AlertTitle>
+                  <div className="animate-pulse h-4 bg-gray-300 w-1/4 rounded"></div>
                 </div>
               ) : (
                 <>
-                  <AlertTitle>Weather Suggestion</AlertTitle>
+                  <AlertTitle>Whether Suggestion</AlertTitle>
                   <AlertDescription>{suggestion}</AlertDescription>
                 </>
               )}
