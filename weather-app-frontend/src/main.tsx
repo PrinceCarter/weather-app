@@ -8,8 +8,6 @@ import App from "./App.tsx";
 const GRAPHQL_URI =
   import.meta.env.VITE_GRAPHQL_URI || "http://localhost:4000/graphql";
 
-console.log(`🔗 Connecting to GraphQL at: ${GRAPHQL_URI}`);
-
 // Create Apollo Client
 const client = new ApolloClient({
   uri: GRAPHQL_URI,

@@ -78,7 +78,7 @@ export function WeatherChart({
         windSpeed: hour.windSpeed,
       };
     })
-    .filter((data) => !isNaN(data.x.getTime())); // ✅ Ensure valid timestamps
+    .filter((data) => !isNaN(data.x.getTime())); // Ensure valid timestamps
 
   if (formattedData.length === 0) return <p>No valid data available</p>;
 

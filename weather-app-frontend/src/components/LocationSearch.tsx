@@ -1,24 +1,9 @@
 import { useState, useEffect, useRef } from "react";
-import { gql, useLazyQuery } from "@apollo/client";
-
-const GET_LOCATION_SUGGESTIONS = gql`
-  query GetLocationSuggestions($input: String!) {
-    getLocationSuggestions(input: $input) {
-      description
-      placeId
-    }
-  }
-`;
-
-const GET_LOCATION_DETAILS = gql`
-  query GetLocationDetails($placeId: String!) {
-    getLocationDetails(placeId: $placeId) {
-      lat
-      lon
-      address
-    }
-  }
-`;
+import { useLazyQuery } from "@apollo/client";
+import {
+  GET_LOCATION_SUGGESTIONS,
+  GET_LOCATION_DETAILS,
+} from "@/queries/location";
 
 interface LocationSearchProps {
   setLocation: (value: { name: string; lat: number; lon: number }) => void;
@@ -37,6 +22,7 @@ export function LocationSearch({
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const dropdownRef = useRef<HTMLDivElement | null>(null);
   const isManualSelection = useRef(false);
+  const hasUserInteracted = useRef(false); // Tracks user interaction
 
   const [fetchLocations, { data }] = useLazyQuery(GET_LOCATION_SUGGESTIONS, {
     fetchPolicy: "network-only",
@@ -48,6 +34,23 @@ export function LocationSearch({
       fetchPolicy: "network-only",
     }
   );
+
+  // Load last location from localStorage
+  useEffect(() => {
+    const savedLocation = localStorage.getItem("lastLocation");
+    if (savedLocation) {
+      try {
+        const parsedLocation = JSON.parse(savedLocation);
+        if (parsedLocation && parsedLocation.name) {
+          setInputValue(parsedLocation.name); // Prefill input field
+          setShowDropdown(false); // Ensure dropdown stays closed
+        }
+      } catch (error) {
+        console.error("Error parsing saved location:", error);
+        localStorage.removeItem("lastLocation"); // Remove if invalid
+      }
+    }
+  }, []);
 
   // Fetch location suggestions with debouncing
   useEffect(() => {
@@ -75,7 +78,12 @@ export function LocationSearch({
           })
         )
       );
-      setShowDropdown(true);
+
+      // Only show the dropdown if the user has interacted with the input
+      if (hasUserInteracted.current) {
+        setShowDropdown(true);
+      }
+
       setSelectedIndex(-1);
     }
   }, [data]);
@@ -105,7 +113,16 @@ export function LocationSearch({
       <input
         type="text"
         value={inputValue}
-        onChange={(e) => setInputValue(e.target.value)}
+        onChange={(e) => {
+          setInputValue(e.target.value);
+          hasUserInteracted.current = true; // User is typing, allow dropdown to open
+        }}
+        onFocus={() => {
+          if (suggestions.length > 0) {
+            setShowDropdown(true); // Only open if there are suggestions
+          }
+        }}
+        onBlur={() => setTimeout(() => setShowDropdown(false), 200)} // Delay closing to allow click selection
         onKeyDown={(event) => {
           if (event.key === "ArrowDown") {
             setSelectedIndex((prev) =>
@@ -123,7 +140,10 @@ export function LocationSearch({
         }}
         placeholder="Enter location"
         style={{ wordBreak: "break-word", whiteSpace: "normal" }}
-        className="w-full text-xl sm:text-2xl md:text-2xl lg:text-4xl font-bold border-0 border-b border-gray-300 py-1 focus:outline-none focus:ring-0 focus:border-black"
+        className="w-full text-xl sm:text-2xl md:text-2xl lg:text-4xl font-bold 
+        border-0 border-b border-gray-300 py-1 
+        focus:outline-none focus:ring-0 focus:border-black 
+        rounded-none shadow-none appearance-none"
       />
       {showDropdown && suggestions.length > 0 && (
         <div

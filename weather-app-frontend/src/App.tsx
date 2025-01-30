@@ -33,6 +33,18 @@ export default function App() {
     fetchPolicy: "network-only",
   });
 
+  // Apply "overflow-hidden" when no search has been done
+  useEffect(() => {
+    if (!hasSearched) {
+      document.body.style.overflow = "hidden"; // Prevent scrolling on mobile
+    } else {
+      document.body.style.overflow = "auto"; // Allow scrolling when charts exist
+    }
+    return () => {
+      document.body.style.overflow = "auto"; // Reset on unmount
+    };
+  }, [hasSearched]);
+
   // Load last search location from LocalStorage on mount
   useEffect(() => {
     const savedLocation = localStorage.getItem("lastLocation");
@@ -64,7 +76,6 @@ export default function App() {
   // Search weather based on lat/lon
   const handleSearch = useCallback(
     (lat: number, lon: number, name: string) => {
-      console.log("Handle Search:", name, lat, lon);
       if (lat && lon) {
         setHasSearched(true);
         setLoadingSuggestion(true);
@@ -143,10 +154,10 @@ export default function App() {
   }, [selectedDaysData]);
 
   return (
-    <div className="min-h-screen bg-white flex flex-col w-screen px-4 my-4">
+    <div className="h-auto min-h-screen bg-white flex flex-col w-screen px-4 my-4">
       <Navbar />
-      <main className="w-full flex-1 flex flex-col items-center">
-        <div className="w-full bg-white">
+      <main className="w-full flex-1 flex flex-col justify-between items-center">
+        <div className="w-full bg-white min-h-screen h-auto flex flex-col justify-between">
           {/* Search UI */}
           <div className="flex flex-col md:flex-row justify-between items-center mb-4 gap-4">
             <LocationSearch
@@ -206,7 +217,7 @@ export default function App() {
 
           {/* Weather Cards */}
           {hasSearched && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full flex-grow">
               {loading
                 ? Array(2)
                     .fill(0)
