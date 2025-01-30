@@ -34,12 +34,7 @@ export const typeDefs = gql`
   }
 
   type Query {
-    getWeather(
-      lat: Float!
-      lon: Float!
-      selectedDay: String!
-      weekOffset: Int!
-    ): [Weather]
+    getWeather(lat: Float!, lon: Float!, selectedDay: String!): [Weather]
     getLocationSuggestions(input: String!): [LocationSuggestion]
     getLocationDetails(placeId: String!): LocationDetails
   }

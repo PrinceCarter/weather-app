@@ -41,8 +41,7 @@ export const resolvers = {
         lat,
         lon,
         selectedDay,
-        weekOffset,
-      }: { lat: number; lon: number; selectedDay: string; weekOffset: number }
+      }: { lat: number; lon: number; selectedDay: string }
     ) => {
       try {
         // Calculate the next occurrence of the selected weekday
@@ -50,11 +49,8 @@ export const resolvers = {
         const targetDayIndex = weekdayMap[selectedDay];
         let daysToAdd = (targetDayIndex + 7 - today.day()) % 7;
 
-        // If today is the selected day and it's the current week, use today
-        if (daysToAdd === 0 && weekOffset === 0) {
+        if (daysToAdd === 0) {
           daysToAdd = 0;
-        } else {
-          daysToAdd += weekOffset * 7;
         }
 
         const startDate = today.add(daysToAdd, "day").format("YYYY-MM-DD");

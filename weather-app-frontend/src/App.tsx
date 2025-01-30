@@ -9,69 +9,75 @@ import { DaySelector } from "@/components/DaySelector";
 import { WeatherCard } from "@/components/WeatherCard";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { WeatherDay } from "@/types/weather";
-import { TimeOfDay } from "@/types/weather";
+import { WeatherDay, TimeOfDay } from "@/types/weather";
 import { GET_WEATHER } from "@/queries/weather";
 import { getBetterDaySuggestion } from "@/utils/suggestions";
 
 dayjs.extend(isSameOrAfter);
 
 export default function App() {
-  const [location, setLocation] = useState<{
-    name: string;
-    lat: number;
-    lon: number;
-  } | null>(null);
   const [selectedDay, setSelectedDay] = useState(dayjs().format("dddd"));
   const [selectedTime, setSelectedTime] = useState<TimeOfDay>("Afternoon");
-  const [weekOffset, setWeekOffset] = useState(0);
   const [hasSearched, setHasSearched] = useState(false);
   const [loadingSuggestion, setLoadingSuggestion] = useState(false);
   const [suggestion, setSuggestion] = useState("");
+  const [weatherData, setWeatherData] = useState<WeatherDay[]>([]);
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
   const [getWeather, { data, loading, error }] = useLazyQuery(GET_WEATHER, {
     fetchPolicy: "network-only",
   });
 
-  // Apply "overflow-hidden" when no search has been done
+  // Prevent scrolling on initial load
   useEffect(() => {
-    if (!hasSearched) {
-      document.body.style.overflow = "hidden"; // Prevent scrolling on mobile
-    } else {
-      document.body.style.overflow = "auto"; // Allow scrolling when charts exist
-    }
+    document.body.style.overflow = hasSearched ? "auto" : "hidden";
     return () => {
-      document.body.style.overflow = "auto"; // Reset on unmount
+      document.body.style.overflow = "auto";
     };
   }, [hasSearched]);
+
+  // Detect screen size changes & reset activeIndex when switching to desktop
+  useEffect(() => {
+    const handleResize = () => {
+      const isCurrentlyMobile = window.innerWidth < 768;
+      setIsMobile(isCurrentlyMobile);
+
+      // Reset to show both weeks when switching to desktop
+      if (!isCurrentlyMobile) {
+        setActiveIndex(0);
+      }
+    };
+
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   // Load last search location from LocalStorage on mount
   useEffect(() => {
     const savedLocation = localStorage.getItem("lastLocation");
-
     try {
       if (savedLocation) {
-        const parsedLocation = JSON.parse(savedLocation);
-
-        if (parsedLocation && parsedLocation.lat && parsedLocation.lon) {
-          setLocation(parsedLocation);
+        const { lat, lon } = JSON.parse(savedLocation);
+        if (lat && lon) {
           setHasSearched(true);
           setLoadingSuggestion(true);
-          getWeather({
-            variables: {
-              lat: parsedLocation.lat,
-              lon: parsedLocation.lon,
-              selectedDay,
-              weekOffset,
-            },
-          });
+          getWeather({ variables: { lat, lon, selectedDay } });
         }
       }
     } catch (error) {
       console.error("Error parsing saved location from localStorage:", error);
-      localStorage.removeItem("lastLocation"); // Clear invalid data
+      localStorage.removeItem("lastLocation");
     }
-  }, [getWeather, selectedDay, weekOffset]);
+  }, [getWeather, selectedDay]);
+
+  // Store fetched weather data
+  useEffect(() => {
+    if (data?.getWeather) {
+      setWeatherData(data.getWeather);
+      setLoadingSuggestion(false);
+    }
+  }, [data]);
 
   // Search weather based on lat/lon
   const handleSearch = useCallback(
@@ -83,50 +89,13 @@ export default function App() {
           "lastLocation",
           JSON.stringify({ name, lat, lon })
         );
-        setLocation({ name, lat, lon });
-        getWeather({ variables: { lat, lon, selectedDay, weekOffset } });
+        getWeather({ variables: { lat, lon, selectedDay } });
       }
     },
-    [selectedDay, weekOffset, getWeather]
+    [getWeather, selectedDay]
   );
 
-  // Move forward two weeks
-  const handleNextWeeks = () => {
-    const newOffset = weekOffset + 2;
-    setWeekOffset(newOffset);
-    setLoadingSuggestion(true);
-    if (location) {
-      getWeather({
-        variables: {
-          lat: location.lat,
-          lon: location.lon,
-          selectedDay,
-          weekOffset: newOffset,
-        },
-      });
-    }
-  };
-
-  // Move backward two weeks (only if it does not go into the past)
-  const handlePrevWeeks = () => {
-    if (weekOffset > 0) {
-      const newOffset = weekOffset - 2;
-      setWeekOffset(newOffset);
-      setLoadingSuggestion(true);
-      if (location) {
-        getWeather({
-          variables: {
-            lat: location.lat,
-            lon: location.lon,
-            selectedDay,
-            weekOffset: newOffset,
-          },
-        });
-      }
-    }
-  };
-
-  // Ensure only the correct day of the week appears in the dataset
+  // Extract weather for the selected day from cached data
   const getNextTwoOccurrences = (weatherData: WeatherDay[]) => {
     const today = dayjs();
     return weatherData
@@ -140,7 +109,6 @@ export default function App() {
       .slice(0, 2);
   };
 
-  const weatherData = data?.getWeather || [];
   const selectedDaysData = getNextTwoOccurrences(weatherData);
 
   // Determine the better day suggestion
@@ -153,6 +121,10 @@ export default function App() {
     }
   }, [selectedDaysData]);
 
+  // Handle switching weeks on mobile
+  const handlePrevWeek = () => setActiveIndex((prev) => Math.max(prev - 1, 0));
+  const handleNextWeek = () => setActiveIndex((prev) => Math.min(prev + 1, 1));
+
   return (
     <div className="h-auto min-h-screen bg-white flex flex-col w-screen px-4 my-4">
       <Navbar />
@@ -160,10 +132,7 @@ export default function App() {
         <div className="w-full bg-white min-h-screen h-auto">
           {/* Search UI */}
           <div className="flex flex-col md:flex-row justify-between items-center mb-4 gap-4">
-            <LocationSearch
-              setLocation={setLocation}
-              handleSearch={handleSearch}
-            />
+            <LocationSearch handleSearch={handleSearch} />
             <DaySelector
               selectedDay={selectedDay}
               setSelectedDay={setSelectedDay}
@@ -191,15 +160,15 @@ export default function App() {
             </Alert>
           )}
 
-          {/* Arrows Container - Moved Below Suggestion */}
-          {hasSearched && (
+          {/* Mobile Arrows for Week Switching */}
+          {hasSearched && isMobile && (
             <div className="relative flex justify-between items-center w-full mb-4">
               <Button
                 variant="outline"
                 className="rounded-full p-3 bg-white disabled:opacity-50 disabled:pointer-events-none hover:bg-gray-100 transition h-12 w-12"
-                onClick={handlePrevWeeks}
-                disabled={weekOffset === 0}
-                aria-label="Previous weeks"
+                onClick={handlePrevWeek}
+                disabled={activeIndex === 0}
+                aria-label="Previous week"
               >
                 <ChevronLeft className="w-6 h-6" />
               </Button>
@@ -207,17 +176,22 @@ export default function App() {
               <Button
                 variant="outline"
                 className="rounded-full bg-white hover:bg-gray-100 transition h-12 w-12"
-                onClick={handleNextWeeks}
-                aria-label="Next weeks"
+                onClick={handleNextWeek}
+                disabled={activeIndex === 1}
+                aria-label="Next week"
               >
                 <ChevronRight className="w-6 h-6" />
               </Button>
             </div>
           )}
 
-          {/* Weather Cards */}
+          {/* Weather Cards - Show 2 on Desktop, 1 at a time on Mobile */}
           {hasSearched && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
+            <div
+              className={`grid gap-4 w-full ${
+                isMobile ? "grid-cols-1" : "md:grid-cols-2"
+              }`}
+            >
               {loading
                 ? Array(2)
                     .fill(0)
@@ -227,16 +201,25 @@ export default function App() {
                         className="animate-pulse bg-gray-300 h-48 rounded-lg"
                       ></div>
                     ))
-                : selectedDaysData.map((day, index) => (
-                    <WeatherCard
-                      key={index}
-                      day={day}
-                      label={
-                        weekOffset === 0 ? (index === 0 ? "This" : "Next") : ""
-                      }
-                      selectedTime={selectedTime}
-                    />
-                  ))}
+                : selectedDaysData.map((day, index) =>
+                    isMobile ? (
+                      index === activeIndex ? (
+                        <WeatherCard
+                          key={index}
+                          day={day}
+                          label={index === 0 ? "This" : "Next"}
+                          selectedTime={selectedTime}
+                        />
+                      ) : null
+                    ) : (
+                      <WeatherCard
+                        key={index}
+                        day={day}
+                        label={index === 0 ? "This" : "Next"}
+                        selectedTime={selectedTime}
+                      />
+                    )
+                  )}
             </div>
           )}
         </div>

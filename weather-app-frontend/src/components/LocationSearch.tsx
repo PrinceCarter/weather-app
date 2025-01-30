@@ -6,14 +6,10 @@ import {
 } from "@/queries/location";
 
 interface LocationSearchProps {
-  setLocation: (value: { name: string; lat: number; lon: number }) => void;
   handleSearch: (lat: number, lon: number, name: string) => void;
 }
 
-export function LocationSearch({
-  setLocation,
-  handleSearch,
-}: LocationSearchProps) {
+export function LocationSearch({ handleSearch }: LocationSearchProps) {
   const [inputValue, setInputValue] = useState("");
   const [suggestions, setSuggestions] = useState<
     { name: string; placeId: string }[]
@@ -40,10 +36,9 @@ export function LocationSearch({
     const savedLocation = localStorage.getItem("lastLocation");
     if (savedLocation) {
       try {
-        const parsedLocation = JSON.parse(savedLocation);
-        if (parsedLocation && parsedLocation.name) {
-          setInputValue(parsedLocation.name); // Prefill input field
-          setShowDropdown(false); // Ensure dropdown stays closed
+        const { name } = JSON.parse(savedLocation);
+        if (name) {
+          setInputValue(name); // Prefill input field
         }
       } catch (error) {
         console.error("Error parsing saved location:", error);
@@ -79,11 +74,9 @@ export function LocationSearch({
         )
       );
 
-      // Only show the dropdown if the user has interacted with the input
       if (hasUserInteracted.current) {
         setShowDropdown(true);
       }
-
       setSelectedIndex(-1);
     }
   }, [data]);
@@ -92,10 +85,13 @@ export function LocationSearch({
   useEffect(() => {
     if (locationData?.getLocationDetails) {
       const { lat, lon, address } = locationData.getLocationDetails;
-      setLocation({ name: address, lat, lon });
+      localStorage.setItem(
+        "lastLocation",
+        JSON.stringify({ name: address, lat, lon })
+      ); // Save latest location
       handleSearch(lat, lon, address);
     }
-  }, [locationData]);
+  }, [locationData, handleSearch]);
 
   // Handle dropdown selection
   const handleSelect = (index: number) => {
@@ -119,7 +115,7 @@ export function LocationSearch({
         }}
         onFocus={() => {
           if (suggestions.length > 0) {
-            setShowDropdown(true); // Only open if there are suggestions
+            setShowDropdown(true);
           }
         }}
         onBlur={() => setTimeout(() => setShowDropdown(false), 200)} // Delay closing to allow click selection
@@ -139,7 +135,6 @@ export function LocationSearch({
           }
         }}
         placeholder="Enter location"
-        style={{ wordBreak: "break-word", whiteSpace: "normal" }}
         className="w-full text-xl sm:text-2xl md:text-2xl lg:text-4xl font-bold 
         border-0 border-b border-gray-300 py-1 
         focus:outline-none focus:ring-0 focus:border-black 
