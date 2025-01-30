@@ -118,8 +118,6 @@ query GetLocationDetails($placeId: String!) {
 ---
 
 ## 🐛 Known Issues & Fixes
-- **White space issue on mobile** ✅ Fixed by ensuring full viewport height (`h-screen` & `flex-grow`).
-- **GraphQL query errors** ✅ Resolved by ensuring required variables (`selectedDay`).
 - **Resizing bug** ✅ Now properly resets layout when switching between desktop and mobile.
 
 ---
