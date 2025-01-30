@@ -157,7 +157,7 @@ export default function App() {
     <div className="h-auto min-h-screen bg-white flex flex-col w-screen px-4 my-4">
       <Navbar />
       <main className="w-full flex-1 flex flex-col justify-between items-center">
-        <div className="w-full bg-white min-h-screen h-auto flex flex-col justify-between">
+        <div className="w-full bg-white min-h-screen h-auto">
           {/* Search UI */}
           <div className="flex flex-col md:flex-row justify-between items-center mb-4 gap-4">
             <LocationSearch
@@ -217,7 +217,7 @@ export default function App() {
 
           {/* Weather Cards */}
           {hasSearched && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full flex-grow">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
               {loading
                 ? Array(2)
                     .fill(0)

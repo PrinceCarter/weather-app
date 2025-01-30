@@ -55,7 +55,7 @@ export function WeatherChart({
 }: WeatherChartProps) {
   if (!hourlyData || hourlyData.length === 0)
     return (
-      <Alert variant="destructive" className="mt-4">
+      <Alert variant="destructive" className="w-fit mt-4">
         {/* <AlertCircle className="h-4 w-4" /> */}
         <AlertTitle>Error</AlertTitle>
         <AlertDescription>
