@@ -123,6 +123,7 @@ query GetLocationDetails($placeId: String!) {
 ---
 
 ## 📌 Future Enhancements
+- 🌤️ **Dynamic Weather Updates** – Enhance the charts to update weather statistics dynamically alongside the time of day for a more immersive experience.
 - 🔥 **Hourly Weather Breakdown**: View detailed hourly weather comparisons.
 - 🌍 **Multi-Language Support**: Add translations for global users.
 - 🎨 **Dark Mode**: Theme toggle for better readability.
